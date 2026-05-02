@@ -8,7 +8,7 @@ class AVE_API_WP_JSON
             'callback' => [self::class, 'getCity'],
             'permission_callback' => '__return_true',
         ]);
-        register_rest_route('ave/cotizar', [
+        register_rest_route('ave','/cotizar', [
             'methods'  => 'POST',
             'callback' => [self::class, 'postCotizar'],
             'permission_callback' => '__return_true',
