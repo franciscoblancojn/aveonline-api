@@ -14,11 +14,22 @@ Text Domain: wc-aveonline-api
 if (!function_exists('is_plugin_active'))
     require_once(ABSPATH . '/wp-admin/includes/plugin.php');
 
+define("AVE_API_KEY", 'AVE_API');
+define("AVE_API_MODE_DEV", true);
+define("AVE_API_KEY_SEPARETE", '____AVE_API____');
+define("AVE_API_CONFIG", 'AVE_API_CONFIG');
+define("AVE_API_CONTENT", 'AVE_API_CONTENT');
+define("AVE_API_LOG", true);
+define("AVE_API_LOG_KEY", "AVE_API_LOG");
+define("AVE_API_LOG_COUNT", 100);
+define("AVE_API_BASENAME", plugin_basename(__FILE__));
+define("AVE_API_DIR", plugin_dir_path(__FILE__));
+define("AVE_API_URL", plugin_dir_url(__FILE__));
 
-require_once DPAI_DIR . 'update.php';
+require_once AVE_API_DIR . 'update.php';
 github_updater_plugin_wordpress([
-    'basename' => DPAI_BASENAME,
-    'dir' => DPAI_DIR,
+    'basename' => AVE_API_BASENAME,
+    'dir' => AVE_API_DIR,
     'file' => "index.php",
     'path_repository' => 'franciscoblancojn/aveonline-api',
     'branch' => 'master',
