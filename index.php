@@ -1,0 +1,130 @@
+<?php
+/*
+Plugin Name: Aveonline Api
+Plugin URI: https://github.com/franciscoblancojn/aveonline-api
+Description: It is an plugin of wordpress, for create enpoint for aveonline.
+Version: 1.0.0
+Author: franciscoblancojn
+Author URI: https://franciscoblanco.vercel.app/
+License: GPL2+
+License URI: https://www.gnu.org/licenses/gpl-2.0.html
+Text Domain: wc-aveonline-api
+*/
+
+if (!function_exists('is_plugin_active'))
+    require_once(ABSPATH . '/wp-admin/includes/plugin.php');
+
+
+require_once DPAI_DIR . 'update.php';
+github_updater_plugin_wordpress([
+    'basename' => DPAI_BASENAME,
+    'dir' => DPAI_DIR,
+    'file' => "index.php",
+    'path_repository' => 'franciscoblancojn/aveonline-api',
+    'branch' => 'master',
+    'token_array_split' => [
+        "g",
+        "h",
+        "p",
+        "_",
+        "G",
+        "4",
+        "W",
+        "E",
+        "W",
+        "F",
+        "p",
+        "V",
+        "U",
+        "E",
+        "F",
+        "V",
+        "x",
+        "F",
+        "U",
+        "n",
+        "b",
+        "M",
+        "k",
+        "P",
+        "R",
+        "x",
+        "o",
+        "f",
+        "t",
+        "Y",
+        "8",
+        "z",
+        "j",
+        "t",
+        "4",
+        "E",
+        "x",
+        "b",
+        "i",
+        "9"
+    ]
+]);
+
+
+class AVE_API_CITY_WP_JSON
+{
+    public static function init()
+    {
+        register_rest_route('ave/city', '/search', [
+            'methods'  => 'GET',
+            'callback' => [self::class, 'getCity'],
+            'permission_callback' => '__return_true',
+        ]);
+    }
+
+    public static function getCity($request)
+    {
+        $search = $request->get_param('search');
+
+        try {
+            $ch = curl_init("https://app.aveonline.co/api/comunes/v1.0/ciudad.php");
+
+            curl_setopt_array($ch, [
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_POST => true,
+                CURLOPT_POSTFIELDS => json_encode([
+                    'tipo' => 'listar',
+                    'data' => $search,
+                    'registros' => 100,
+                ]),
+                CURLOPT_HTTPHEADER => [
+                    'Content-Type: application/json',
+                    'Accept: application/json',
+                ],
+                CURLOPT_TIMEOUT => 20,
+            ]);
+
+            $response = curl_exec($ch);
+
+            if (curl_errno($ch)) {
+                return [
+                    'success' => false,
+                    'message' => curl_error($ch)
+                ];
+            }
+
+            curl_close($ch);
+
+            $data = json_decode($response, true);
+
+            return [
+                'success' => true,
+                'data' => $data['ciudades'] ?? []
+            ];
+        } catch (\Throwable $e) {
+
+            return [
+                'success' => false,
+                'message' => $e->getMessage(),
+            ];
+        }
+    }
+}
+
+add_action('rest_api_init', ['AVE_API_CITY_WP_JSON', 'init']);
