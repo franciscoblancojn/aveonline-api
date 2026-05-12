@@ -3,7 +3,7 @@
 Plugin Name: Aveonline Api
 Plugin URI: https://github.com/franciscoblancojn/aveonline-api
 Description: It is an plugin of wordpress, for create enpoint for aveonline.
-Version: 1.3.0
+Version: 1.3.1
 Author: franciscoblancojn
 Author URI: https://franciscoblanco.vercel.app/
 License: GPL2+
