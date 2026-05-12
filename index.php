@@ -27,54 +27,12 @@ define("AVE_API_DIR", plugin_dir_path(__FILE__));
 define("AVE_API_URL", plugin_dir_url(__FILE__));
 
 require_once AVE_API_DIR . 'update.php';
-github_updater_plugin_wordpress([
+github_updater_plugin_wordpress_function([
     'basename' => AVE_API_BASENAME,
     'dir' => AVE_API_DIR,
     'file' => "index.php",
     'path_repository' => 'franciscoblancojn/aveonline-api',
     'branch' => 'master',
-    'token_array_split' => [
-        "g",
-        "h",
-        "p",
-        "_",
-        "G",
-        "4",
-        "W",
-        "E",
-        "W",
-        "F",
-        "p",
-        "V",
-        "U",
-        "E",
-        "F",
-        "V",
-        "x",
-        "F",
-        "U",
-        "n",
-        "b",
-        "M",
-        "k",
-        "P",
-        "R",
-        "x",
-        "o",
-        "f",
-        "t",
-        "Y",
-        "8",
-        "z",
-        "j",
-        "t",
-        "4",
-        "E",
-        "x",
-        "b",
-        "i",
-        "9"
-    ]
 ]);
 
 require_once AVE_API_DIR . 'src/_.php';
