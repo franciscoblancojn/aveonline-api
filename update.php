@@ -1,8 +1,8 @@
 <?php
 
-if (!function_exists("github_updater_plugin_wordpress_function_v1")) {
+if (!function_exists("github_updater_plugin_wordpress")) {
 
-    function github_updater_plugin_wordpress_function_v1($config)
+    function github_updater_plugin_wordpress($config)
     {
 
         if (!is_admin()) {
@@ -10,62 +10,38 @@ if (!function_exists("github_updater_plugin_wordpress_function_v1")) {
         }
 
         /**
-         * SOLO plugins.php y update.php
+         * Configuración base
          */
-        $current_url = $_SERVER['REQUEST_URI'] ?? '';
+        $plugin_slug = basename(rtrim($config['dir'], '/'));
 
-        if (
-            strpos($current_url, '/wp-admin/plugins.php') === false &&
-            strpos($current_url, '/wp-admin/update.php') === false
-        ) {
-            return;
-        }
+        $plugin_file = $plugin_slug . '/' . $config['file'];
 
         /**
-         * Configuración
+         * Forzar refresh cache plugins
          */
-        $plugin_slug = basename(
-            rtrim($config['dir'], '/')
-        );
+        add_action('admin_init', function () {
 
-        $plugin_file =
-            $plugin_slug . '/' . $config['file'];
+            if (!get_transient('github_updater_plugin_wordpress_check')) {
 
-        /**
-         * Refrescar cache cada minuto
-         */
-        if (!get_transient('github_updater_check')) {
+                delete_site_transient('update_plugins');
 
-            delete_site_transient('update_plugins');
-
-            set_transient(
-                'github_updater_check',
-                1,
-                MINUTE_IN_SECONDS
-            );
-        }
+                set_transient(
+                    'github_updater_plugin_wordpress_check',
+                    true,
+                    60
+                );
+            }
+        });
 
         /**
          * Buscar updates
          */
         add_filter(
-            'site_transient_update_plugins',
-            function ($transient) use (
-                $config,
-                $plugin_slug,
-                $plugin_file
-            ) {
+            'pre_set_site_transient_update_plugins',
+            function ($transient) use ($config, $plugin_slug, $plugin_file) {
 
-                if (
-                    !is_object($transient)
-                ) {
-                    $transient = new stdClass();
-                }
-
-                if (
-                    !isset($transient->response)
-                ) {
-                    $transient->response = [];
+                if (empty($transient->checked)) {
+                    return $transient;
                 }
 
                 /**
@@ -76,35 +52,18 @@ if (!function_exists("github_updater_plugin_wordpress_function_v1")) {
                     $config['path_repository'] .
                     '/releases/latest';
 
-                $response = wp_remote_get(
-                    $github_api_url,
-                    [
-                        'headers' => [
-                            'User-Agent' => 'WordPress-Updater',
-                            'Accept' => 'application/vnd.github+json',
-                        ],
-                        'timeout' => 20,
-                    ]
-                );
+                $response = wp_remote_get($github_api_url, [
+                    'headers' => [
+                        'User-Agent' => 'WordPress-GitHub-Updater',
+                        'Accept' => 'application/vnd.github+json',
+                    ],
+                    'timeout' => 20,
+                ]);
 
                 if (is_wp_error($response)) {
                     return $transient;
                 }
 
-                /**
-                 * Status HTTP
-                 */
-                $code = wp_remote_retrieve_response_code(
-                    $response
-                );
-
-                if ($code !== 200) {
-                    return $transient;
-                }
-
-                /**
-                 * Release
-                 */
                 $release = json_decode(
                     wp_remote_retrieve_body($response)
                 );
@@ -125,20 +84,17 @@ if (!function_exists("github_updater_plugin_wordpress_function_v1")) {
                 );
 
                 /**
-                 * Plugin data
+                 * Version instalada
                  */
                 if (!function_exists('get_plugin_data')) {
-                    require_once
-                        ABSPATH .
-                        'wp-admin/includes/plugin.php';
+                    require_once ABSPATH . 'wp-admin/includes/plugin.php';
                 }
 
                 $plugin_path =
                     trailingslashit($config['dir']) .
                     $config['file'];
 
-                $plugin_data =
-                    get_plugin_data($plugin_path);
+                $plugin_data = get_plugin_data($plugin_path);
 
                 $current_version =
                     $plugin_data['Version'];
@@ -180,7 +136,7 @@ if (!function_exists("github_updater_plugin_wordpress_function_v1")) {
                     }
 
                     /**
-                     * fallback
+                     * fallback zipball
                      */
                     if (
                         !$package_url &&
@@ -194,15 +150,15 @@ if (!function_exists("github_updater_plugin_wordpress_function_v1")) {
                     /**
                      * Registrar update
                      */
-                    $transient->response[$plugin_file] =
-                        (object) [
-                            'slug' => $plugin_slug,
-                            'plugin' => $plugin_file,
-                            'new_version' => $latest_version,
-                            'package' => $package_url,
-                            'url' => 'https://github.com/' .
-                                $config['path_repository'],
-                        ];
+                    $transient->response[$plugin_file] = (object) [
+                        'slug'        => $plugin_slug,
+                        'plugin'      => $plugin_file,
+                        'new_version' => $latest_version,
+                        'package'     => $package_url,
+                        'url'         => 'https://github.com/' . $config['path_repository'],
+                        'tested'      => get_bloginfo('version'),
+                        'requires'    => '5.0',
+                    ];
                 }
 
                 return $transient;
@@ -210,30 +166,80 @@ if (!function_exists("github_updater_plugin_wordpress_function_v1")) {
         );
 
         /**
-         * Botón actualizar
+         * FIX IMPORTANTE:
+         * Renombrar carpeta extraída del ZIP
+         *
+         * GitHub extrae:
+         * repo-hash
+         *
+         * WordPress necesita:
+         * plugin-slug
          */
         add_filter(
-            'plugin_action_links_' .
-                $config['basename'],
-            function ($links, $file) use (
-                $config,
-                $plugin_slug
-            ) {
+            'upgrader_source_selection',
+            function (
+                $source,
+                $remote_source,
+                $upgrader,
+                $hook_extra
+            ) use ($plugin_slug) {
 
                 if (
-                    $file !== $config['basename']
+                    empty($hook_extra['plugin'])
                 ) {
+                    return $source;
+                }
+
+                /**
+                 * Ruta final correcta
+                 */
+                $corrected_source =
+                    trailingslashit($remote_source) .
+                    $plugin_slug;
+
+                /**
+                 * Si ya existe eliminar
+                 */
+                if (file_exists($corrected_source)) {
+                    WP_Filesystem();
+                    global $wp_filesystem;
+                    $wp_filesystem->delete(
+                        $corrected_source,
+                        true
+                    );
+                }
+
+                /**
+                 * Renombrar carpeta
+                 */
+                rename(
+                    $source,
+                    $corrected_source
+                );
+
+                return $corrected_source;
+            },
+            10,
+            4
+        );
+
+        /**
+         * Mostrar botón actualizar
+         */
+        add_filter(
+            'plugin_action_links_' . $config['basename'],
+            function ($links, $file) use ($config, $plugin_slug) {
+
+                if ($file !== $config['basename']) {
                     return $links;
                 }
 
-                $actualizar_url =
-                    wp_nonce_url(
-                        admin_url(
-                            'update.php?action=upgrade-plugin&plugin=' .
-                                $file
-                        ),
-                        'upgrade-plugin_' . $file
-                    );
+                $actualizar_url = wp_nonce_url(
+                    admin_url(
+                        'update.php?action=upgrade-plugin&plugin=' . $file
+                    ),
+                    'upgrade-plugin_' . $file
+                );
 
                 $links[] = '
                     <a 
@@ -242,9 +248,10 @@ if (!function_exists("github_updater_plugin_wordpress_function_v1")) {
                     >
                         Actualizar
                     </a>
+
                     <style>
-                        tr.plugin-update-tr[data-slug="'.$plugin_slug.'"] a,
-                        tr.plugin-update-tr[data-slug="'.$plugin_slug.'"] a + *{
+                        tr.plugin-update-tr[data-slug="' . $plugin_slug . '"] a,
+                        tr.plugin-update-tr[data-slug="' . $plugin_slug . '"] a + *{
                             display:none;
                         }
                     </style>
