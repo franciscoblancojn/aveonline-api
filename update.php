@@ -1,8 +1,8 @@
 <?php
 
-if (!function_exists("github_updater_plugin_wordpress")) {
+if (!function_exists("github_updater_plugin_wordpress_function_v1")) {
 
-    function github_updater_plugin_wordpress($config)
+    function github_updater_plugin_wordpress_function_v1($config)
     {
 
         if (!is_admin()) {
