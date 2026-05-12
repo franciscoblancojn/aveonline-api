@@ -8,7 +8,7 @@ class AVE_API_WP_JSON
             'callback' => [self::class, 'getCity'],
             'permission_callback' => '__return_true',
         ]);
-        register_rest_route('ave','/cotizar', [
+        register_rest_route('ave', '/cotizar', [
             'methods'  => 'POST',
             'callback' => [self::class, 'postCotizar'],
             'permission_callback' => '__return_true',
@@ -83,12 +83,29 @@ class AVE_API_WP_JSON
             $unidades = (int) $request->get_param('unidades');
             $valorDeclarado = (float) $request->get_param('valor_declarado');
 
-            // opcionales (puedes poner default)
-            $alto = (float) ($request->get_param('alto') ?? 10);
-            $largo = (float) ($request->get_param('largo') ?? 10);
-            $ancho = (float) ($request->get_param('ancho') ?? 10);
+            $alto = $request->get_param('alto');
+            $largo = $request->get_param('largo');
+            $ancho = $request->get_param('ancho');
 
-            // 🔥 Body dinámico (NO string manual)
+            $producto = [
+                "name" => "Producto",
+                "peso" => $peso,
+                "unidades" => $unidades,
+                "valorDeclarado" => $valorDeclarado
+            ];
+
+            // solo agregar dimensiones si existen
+            if ($alto !== null && $alto !== '') {
+                $producto["alto"] = (float) $alto;
+            }
+
+            if ($largo !== null && $largo !== '') {
+                $producto["largo"] = (float) $largo;
+            }
+
+            if ($ancho !== null && $ancho !== '') {
+                $producto["ancho"] = (float) $ancho;
+            }
             $body = [
                 "tipo" => "cotizarDoble",
                 "access" => "",
@@ -105,15 +122,7 @@ class AVE_API_WP_JSON
                 "valorrecaudo" => $contraentrega ? $valorDeclarado : 0,
 
                 "productos" => [
-                    [
-                        "name" => "Producto",
-                        "alto" => $alto,
-                        "largo" => $largo,
-                        "ancho" => $ancho,
-                        "peso" => $peso,
-                        "unidades" => $unidades,
-                        "valorDeclarado" => $valorDeclarado
-                    ]
+                    $producto
                 ],
 
                 "valorMinimo" => 0,
