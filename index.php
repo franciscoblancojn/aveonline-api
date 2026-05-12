@@ -27,7 +27,7 @@ define("AVE_API_DIR", plugin_dir_path(__FILE__));
 define("AVE_API_URL", plugin_dir_url(__FILE__));
 
 require_once AVE_API_DIR . 'update.php';
-github_updater_plugin_wordpress_function([
+github_updater_plugin_wordpress_function_v1([
     'basename' => AVE_API_BASENAME,
     'dir' => AVE_API_DIR,
     'file' => "index.php",
